@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  .dockerconfigjson: {{ template "imagePullSecret" . }}
+kind: Secret
+metadata:
+  creationTimestamp: "2021-09-09T06:52:17Z"
+  name: registrycred
+  namespace: {{ .Values.namespace }}
+  resourceVersion: "265394"
+  uid: e0a17a53-7d4e-48ad-9354-2f12e4804d26
+type: kubernetes.io/dockerconfigjson

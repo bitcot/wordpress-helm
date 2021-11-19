@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.wordpress.pv }}
+  labels:
+    app: {{ .Values.wordpress.deployment_name }}
+spec:
+  storageClassName: {{ .Values.storageClass }}
+  capacity:
+    storage: {{ .Values.storage }}
+  {{- with .Values.accessModes }}
+  accessModes:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  hostPath:
+    path: {{ .Values.wordpress.host_path }}

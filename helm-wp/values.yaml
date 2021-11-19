@@ -1,0 +1,92 @@
+replicaCount: 1
+
+namespace: bitcot
+
+imagePullSecrets: 
+  - name: registrycred
+
+accessModes: 
+  - ReadWriteOnce
+
+storageClass: manual
+
+storage: 3Gi
+
+imageCredentials:
+  registry: https://index.docker.io/v1/
+  username: ####
+  password: ####
+  email: dev@bitcot.com
+
+
+wordpress:
+  image: devbitcot/kb-wp:45
+  deployment_name: wp-host
+  deployment_app: wordpress-know2
+  imagePullPolicy: Always
+  container_port: 80
+  volume_mount: /var/www/html
+  volume_name: know2
+  host_path: /data/know2/
+  pvc: wp-pvc
+  pv: wp-pv
+
+secretkeys:
+  WORDPRESS_AUTH_KEY: SECURE_AUTH_KEY
+  WORDPRESS_AUTH_SALT: SECURE_AUTH_SALT
+  MYSQL_DATABASE: know2
+  MYSQL_PASSWORD: groot
+  MYSQL_ROOT_PASSWORD: groot
+  MYSQL_USER: wp_root
+  WORDPRESS_DB_HOST: bitcot-mysql:3306
+  WORDPRESS_LOGGED_IN_KEY: SECURE_LOGGED_IN_KEY
+  WORDPRESS_LOGGED_IN_SALT: SECURE_LOGGED_IN_SALT
+
+servicewp:
+  name: bitcot-wordpress
+  port: 80
+  nodePort: 31004
+  protocol: TCP
+  type: NodePort
+
+secrets: 
+  mysql_name: mysql-creds
+  wp_name: wp-creds
+
+cm:
+  name1: mysql-script
+  name2: db-creation
+
+mysql:
+  image: devbitcot/kb-wordpress:45
+  deployment_name: mysql-host
+  deployment_app: wordpress-know2
+  imagePullPolicy: Always
+  container_port: 3306
+  volume_mount1: /var/lib/mysql
+  volume_name1: mysql-data
+  sub_path: mysql
+  volume_mount2: /docker-entrypoint-initdb.d
+  volume_name2: db-creation
+  pvc: mysql-pvc
+  pv: mysql-pv
+  host_path: /mnt/data
+
+servicemysql:
+  name: bitcot-mysql
+  port: 3306
+  target_port: 3306
+  protocol: TCP
+  type: ClusterIP
+
+livenessProbe: 
+  initailDelaySeconds: 15
+  periodSeconds: 20
+
+resources:
+  limits:
+    memory: "600Mi"
+    cpu: "500m"
+  requests:
+    memory: "512Mi"
+    cpu: "300m"

@@ -1,0 +1,16 @@
+secretkeys:
+  WORDPRESS_AUTH_KEY: SECURE_AUTH_KEY
+  WORDPRESS_AUTH_SALT: SECURE_AUTH_SALT
+  MYSQL_DATABASE: know2
+  MYSQL_PASSWORD: groot
+  MYSQL_ROOT_PASSWORD: groot
+  MYSQL_USER: wp_root
+  WORDPRESS_DB_HOST: bitcot-mysql:3306
+  WORDPRESS_LOGGED_IN_KEY: SECURE_LOGGED_IN_KEY
+  WORDPRESS_LOGGED_IN_SALT: SECURE_LOGGED_IN_SALT
+
+imageCredentials:
+  registry: https://index.docker.io/v1/
+  username: #####
+  password: #####
+  email: dev@bitcot.com

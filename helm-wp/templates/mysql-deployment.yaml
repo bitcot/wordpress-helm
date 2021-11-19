@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.mysql.deployment_name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.mysql.deployment_app }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Values.mysql.deployment_app }}
+      name: {{ .Values.mysql.deployment_name }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.mysql.deployment_app }}
+        name: {{ .Values.mysql.deployment_name }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      containers:
+        - name: mysql-host
+          image: {{ .Values.mysql.image }}
+          imagePullPolicy: {{ .Values.mysql.imagePullPolicy }}
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.mysql_name }}
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.mysql_name }}
+                  key: MYSQL_DATABASE
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.mysql_name }}
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.mysql_name }}
+                  key: MYSQL_PASSWORD
+          ports:
+            - containerPort: {{ .Values.mysql.container_port }}
+              name: {{ .Values.mysql.deployment_name }}
+          livenessProbe:
+            tcpSocket:
+              port: {{ .Values.mysql.container_port }}
+            initialDelaySeconds: {{ .Values.initailDelaySeconds }}
+            periodSeconds: {{ .Values.periodSeconds }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+              - name: {{ .Values.mysql.volume_name1 }}
+                mountPath: {{ .Values.mysql.volume_mount1 }}
+                subPath: {{ .Values.mysql.sub_path }}
+              - name: {{ .Values.mysql.volume_name2 }}
+                mountPath: {{ .Values.mysql.volume_mount2 }} 
+      volumes:
+          - name: {{ .Values.mysql.volume_name1 }}
+            persistentVolumeClaim:
+              claimName: {{ .Values.mysql.pvc }}
+          - name: {{ .Values.mysql.volume_name2 }}
+            configMap:
+              name: {{ .Values.cm.name2 }}
+          
+    

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.cm.name2 }}
+  namespace: {{ .Values.namespace }}
+data: 
+{{ (.Files.Glob "mysqldump/*").AsConfig | indent 2 }}
+{{ (.Files.Glob "mysqlscript/*").AsConfig | indent 2 }}

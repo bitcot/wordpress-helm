@@ -1,0 +1,13 @@
+apiVersion: v2
+name: helm-wp
+description: Wordpress + MySQL helm chart
+type: application
+
+version: 0.1.0
+appVersion: 1.16.0
+maintainers:
+  - name: bitcot
+    email: dev@bitcot.com
+    url: www.bitcot.com
+    contact: contact@bitcot.com
+icon: https://ca.slack-edge.com/T038JGHAM-U10U9592T-7448ec25ea73-54
