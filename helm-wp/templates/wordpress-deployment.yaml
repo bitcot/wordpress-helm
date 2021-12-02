@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-volume-claim
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Release.Name }}-wordpress
+spec:
+{{- with .Values.accessModes }}
+  accessModes:
+    {{- toYaml . | nindent 4 }}
+{{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-wordpress
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Release.Name }}-wordpress
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-wordpress
+      tier: {{ .Values.wordpress.tier }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-wordpress
+        tier: {{ .Values.wordpress.tier }}
+    spec:
+      containers:
+      - image: {{ .Values.wordpress.image }}
+        name: {{ .Release.Name }}-wordpress
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        env:
+        - name: WORDPRESS_DB_HOST
+          valueFrom:
+            secretKeyRef:
+              key: WORDPRESS_DB_HOST
+              name: {{ .Release.Name }}-wordpress-creds
+        - name: WORDPRESS_DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-wordpress-creds
+              key: WORDPRESS_DB_NAME
+        - name: WORDPRESS_DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-wordpress-creds
+              key: WORDPRESS_DB_USER
+        - name: WORDPRESS_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-wordpress-creds
+              key: WORDPRESS_DB_PASSWORD
+        ports:
+        - containerPort: {{ .Values.wordpress.containerPort }}
+          name: {{ .Release.Name }}-wp
+        - name: {{ .Release.Name }}-wp-https
+          containerPort: {{ .Values.wordpress.containerPorthttps }}
+        volumeMounts:
+        - name: {{ .Values.wordpress.Volumes.name }}
+          mountPath: {{ .Values.wordpress.Volumes.mountPath }}
+        #- name: wp-config
+        #  mountPath: /var/www/html/wp-config.php
+        #  subPath: wp-config.php
+      - name: {{ .Values.Sidecar.name }}
+        image: {{ .Values.Sidecar.image }}
+        command: ["/bin/sh","-c"]
+        args: ["apt-get update; apt-get install wget unzip sed -y && wget --limit-rate 500G https://bitcot-testbucket.s3.us-west-2.amazonaws.com/wp-content.zip && unzip wp-content.zip && rm -rf /var/www/html/wp-content && cp -r wp-content /var/www/html && cd /var/www/html && mv wp-config-sample.php wp-config.php && sed -i 's/database_name_here/know2/g' /var/www/html/wp-config.php && sed -i 's/localhost/bitcot-mysql/g' /var/www/html/wp-config.php && sed -i 's/username_here/root/g' /var/www/html/wp-config.php && sed -i 's/password_here/groot/g' /var/www/html/wp-config.php;sleep infinity"]
+        volumeMounts:
+          - name: {{ .Values.wordpress.Volumes.name }}
+            mountPath: {{ .Values.wordpress.Volumes.mountPath }}
+      volumes:
+      - name: {{ .Values.wordpress.Volumes.name }}
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-volume-claim
+     # - name: wp-config
+      #  configMap:
+       #   name: wp-config

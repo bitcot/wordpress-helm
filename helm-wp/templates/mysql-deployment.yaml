@@ -1,74 +1,91 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-mysql-volume-claim
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Release.Name }}-wordpress
+spec:
+{{- with .Values.accessModes }}
+  accessModes:
+    {{- toYaml . | nindent 4 }}
+{{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.storage }}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.mysql.deployment_name }}
+  name: {{ .Release.Name }}-mysql
   namespace: {{ .Values.namespace }}
   labels:
-    app: {{ .Values.mysql.deployment_app }}
+    app: {{ .Release.Name }}-wordpress
 spec:
   selector:
     matchLabels:
-      app: {{ .Values.mysql.deployment_app }}
-      name: {{ .Values.mysql.deployment_name }}
+      app: {{ .Release.Name }}-wordpress
+      tier: {{ .Values.db.tier }}
   strategy:
     type: Recreate
   template:
     metadata:
       labels:
-        app: {{ .Values.mysql.deployment_app }}
-        name: {{ .Values.mysql.deployment_name }}
+        app: {{ .Release.Name }}-wordpress
+        tier: {{ .Values.db.tier }}
     spec:
-    {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-    {{- end }}
+      initContainers:
+      - name: {{ .Values.initContainers.name }}
+        image: {{ .Values.initContainers.image }}
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-mysql-creds
+              key: MYSQL_ROOT_PASSWORD
+        command: ["/bin/sh","-c"]
+        args: ["apt-get update; apt-get install wget unzip -y && wget https://bitcot-testbucket.s3.us-west-2.amazonaws.com/know2.zip && unzip know2.zip && cp know2.sql /docker-entrypoint-initdb.d && cp mysql.sh /docker-entrypoint-initdb.d"]
+        volumeMounts:
+            - name: {{ .Values.initContainers.Volume.name }}
+              mountPath: {{ .Values.initContainers.Volume.mountPath }}
+
       containers:
-        - name: mysql-host
-          image: {{ .Values.mysql.image }}
-          imagePullPolicy: {{ .Values.mysql.imagePullPolicy }}
-          env:
-            - name: MYSQL_ROOT_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secrets.mysql_name }}
-                  key: MYSQL_ROOT_PASSWORD
-            - name: MYSQL_DATABASE
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secrets.mysql_name }}
-                  key: MYSQL_DATABASE
-            - name: MYSQL_USER
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secrets.mysql_name }}
-                  key: MYSQL_USER
-            - name: MYSQL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.secrets.mysql_name }}
-                  key: MYSQL_PASSWORD
-          ports:
-            - containerPort: {{ .Values.mysql.container_port }}
-              name: {{ .Values.mysql.deployment_name }}
-          livenessProbe:
-            tcpSocket:
-              port: {{ .Values.mysql.container_port }}
-            initialDelaySeconds: {{ .Values.initailDelaySeconds }}
-            periodSeconds: {{ .Values.periodSeconds }}
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-          volumeMounts:
-              - name: {{ .Values.mysql.volume_name1 }}
-                mountPath: {{ .Values.mysql.volume_mount1 }}
-                subPath: {{ .Values.mysql.sub_path }}
-              - name: {{ .Values.mysql.volume_name2 }}
-                mountPath: {{ .Values.mysql.volume_mount2 }} 
+      - image: {{ .Values.db.image }}
+        name: {{ .Release.Name }}-mysql
+        resources:
+          {{- toYaml .Values.db.resources | nindent 12 }}
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-mysql-creds
+              key: MYSQL_ROOT_PASSWORD
+        - name: MYSQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-mysql-creds
+              key: MYSQL_DATABASE
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-mysql-creds
+              key: MYSQL_USER
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Release.Name }}-mysql-creds
+              key: MYSQL_PASSWORD
+        ports:
+        - containerPort: {{ .Values.db.containerPort }}
+          name: {{ .Release.Name }}-mysql
+        volumeMounts:
+        - name: {{ .Values.db.Volumes.name }}
+          mountPath: {{ .Values.db.Volumes.mountPath }}
+        - name: {{ .Values.initContainers.Volume.name }}
+          mountPath: {{ .Values.initContainers.Volume.mountPath }}
       volumes:
-          - name: {{ .Values.mysql.volume_name1 }}
-            persistentVolumeClaim:
-              claimName: {{ .Values.mysql.pvc }}
-          - name: {{ .Values.mysql.volume_name2 }}
-            configMap:
-              name: {{ .Values.cm.name2 }}
-          
-    
+      - name: {{ .Values.db.Volumes.name }}
+        persistentVolumeClaim:
+          claimName: {{ .Release.Name }}-mysql-volume-claim
+      - name: {{ .Values.initContainers.Volume.name }}
+        emptyDir: {}

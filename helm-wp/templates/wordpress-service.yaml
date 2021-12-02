@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-wordpress
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Release.Name }}-wordpress
+spec:
+  ports:
+  - port: {{ .Values.wordpress.service.port }}
+    name: {{ .Release.Name }}-wp
+    targetPort: {{ .Values.wordpress.service.targetport }}
+    #nodePort: 31004
+    protocol: {{ .Values.wordpress.service.protocol }}
+  - port: {{ .Values.wordpress.containerPorthttps }}
+    name: {{ .Release.Name }}-wp-https
+    targetPort: {{ .Values.wordpress.containerPorthttps }}
+    protocol: {{ .Values.wordpress.service.protocol }}
+  selector:
+    app: {{ .Release.Name }}-wordpress
+    tier: {{ .Values.wordpress.tier }}
+  type: {{ .Values.wordpress.service.type }}
